@@ -1,7 +1,6 @@
 Public Class MyMsgLogin
     Private Data As JObject
     Private UserCode As String '需要用户在网页上输入的设备代码
-    Private DeviceCode As String '用于轮询的设备代码
     Private Website As String '验证网页的网址
 
 #Region "弹窗"
@@ -81,7 +80,6 @@ Public Class MyMsgLogin
 
     Private Sub Init()
         UserCode = Data("user_code")
-        DeviceCode = Data("device_code")
         Website = Data("verification_uri")
         '设置 UI
         LabTitle.Text = "登录 Minecraft"
@@ -100,61 +98,14 @@ Public Class MyMsgLogin
         If MyConverter.IsExited Then Return
         OpenWebsite(Website)
         ClipboardSet(UserCode)
-        Thread.Sleep((Data("interval").ToObject(Of Integer) - 1) * 1000)
-        '轮询
-        Dim UnknownFailureCount As Integer = 0
-        Do While Not MyConverter.IsExited
-            Try
-                Dim Result = NetRequestByClient(
-                    "https://login.microsoftonline.com/consumers/oauth2/v2.0/token", HttpMethod.Post,
-                    Content:=
-                        "grant_type=urn:ietf:params:oauth:grant-type:device_code" & "&" &
-                        "client_id=" & OAuthClientId & "&" &
-                        "device_code=" & DeviceCode & "&" &
-                        "scope=XboxLive.signin%20offline_access",
-                    ContentType:="application/x-www-form-urlencoded",
-                    Timeout:=5000 + UnknownFailureCount * 5000,
-                    MakeLog:=False, RequireJson:=True)
-                '获取结果
-                Dim ResultJson As JObject = Result.DeserializeJson()
-                McLaunchLog($"令牌过期时间：{ResultJson("expires_in")} 秒")
-                Hint("网页登录成功！", HintType.Green)
-                Finished({ResultJson("access_token").ToString, ResultJson("refresh_token").ToString})
-                Return
-            Catch ex As Exception
-                '修改错误列表时，同时修改 ModLaunch.MsLoginStep1Refresh 中的对应代码
-                If TypeOf ex Is HttpRequestCodeException Then
-                    Dim Response = CType(ex, HttpRequestCodeException).Response
-                    If Response.Contains("authorization_declined") Then
-                        Finished(New Exception("$你拒绝了 PCL 申请的权限……"))
-                        Return
-                    ElseIf Response.Contains("expired_token") Then
-                        Finished(New Exception("$登录用时太长啦，重新试试吧！"))
-                        Return
-                    ElseIf Response.Contains("Account security interrupt") Then
-                        Finished(New Exception("$该账号由于安全问题无法登陆，请前往微软账户页获取更多信息。"))
-                        Return
-                    ElseIf Response.Contains("service abuse") Then
-                        Finished(New Exception("$非常抱歉，该账号已被微软封禁，无法登录。"))
-                        Return
-                    ElseIf Response.Contains("AADSTS70000") Then '可能不能判 “invalid_grant”，见 #269
-                        Finished(New RestartException)
-                        Return
-                    ElseIf Response.Contains("authorization_pending") Then
-                        Thread.Sleep(2000)
-                        Continue Do
-                    End If
-                End If
-                If UnknownFailureCount <= 2 Then
-                    UnknownFailureCount += 1
-                    Logger.Warn(ex, $"登录轮询第 {UnknownFailureCount} 次失败")
-                    Thread.Sleep(2000)
-                Else
-                    Finished(New Exception("登录轮询失败", ex))
-                    Return
-                End If
-            End Try
-        Loop
+        Try
+            Dim ResultJson = MsPollDeviceCode(Data, Function() MyConverter.IsExited)
+            If MyConverter.IsExited Then Return
+            Hint("微软账户已授权，正在验证 Minecraft 资格……", HintType.Green)
+            Finished({ResultJson("access_token").ToString(), ResultJson("refresh_token").ToString()})
+        Catch ex As Exception
+            If Not MyConverter.IsExited Then Finished(ex)
+        End Try
     End Sub
 
 End Class

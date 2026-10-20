@@ -114,7 +114,7 @@ RetryCacheCheck:
             '基础信息
             Logger.Info($"程序版本：{VersionDisplay} ({VersionCode}{If(CommitHash = "", "", $"，#{CommitHash}")})")
             If BuildType = BuildTypes.Snapshot Then
-                Logger.Info($"识别码：{Identify}{If(ThemeCheckOne(9), "，已解锁反馈主题", "，未解锁反馈主题")}")
+                Logger.Info($"识别码：{Identify}")
             Else
                 Logger.Info($"识别码：{Identify}")
             End If

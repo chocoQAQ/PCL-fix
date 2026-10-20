@@ -10,3 +10,7 @@
 我验证了本地和 GitHub 云端 Release 构建，并使用编译后的启动器下载器完成 Minecraft 1.21.1 全套文件安装（约 920 MB），核对了客户端 JAR、资源索引等文件的哈希。同步脚本也通过了无更新、正常合并及冲突撤销测试。登录和游戏启动未在本次任务中测试。
 
 上述验证对应修复提交 `a57a6b4`，可查看[首次云端构建记录](https://github.com/chocoQAQ/PCL-fix/actions/runs/39415230658)。PCL 原有功能来自上游项目，本次修复及自动化配置由 AI 辅助完成，仓库由 chocoQAQ 维护。
+
+随后，我按维护者要求把 Release 改为直接提供 EXE，接入维护者注册的公开 Microsoft Client ID，统一设备码与刷新登录的 v2 接口，修正轮询间隔、限流、取消、过期及应用审核错误提示，并将登录协议回归检查加入自动构建和上游同步。我还移除了主题选择、自定义主题、隐藏主题解锁和土豆码入口，保留默认蓝色界面、原作者署名及赞助链接。
+
+在维护者本人通过微软官方网页授权后，Microsoft 账户、Xbox Live 和 XSTS 验证成功；Minecraft 接口返回 `Invalid app registration`。因此我没有将其标为完整正版登录成功，剩余步骤需等待 Minecraft 服务授权此 Client ID。测试未保存账号密码或登录令牌，CurseForge API 未在本次配置。

@@ -31,6 +31,9 @@ jobs:
       - name: Build and verify the fork
         shell: pwsh
         run: ./scripts/Build-Fix.ps1
+      - name: Verify Microsoft login protocol without account credentials
+        shell: pwsh
+        run: ./scripts/Test-MicrosoftLogin.ps1
       - name: Verify Minecraft downloads using the built launcher
         shell: pwsh
         run: ./scripts/Test-Download.ps1
@@ -42,6 +45,7 @@ jobs:
             artifacts/SHA256SUMS.txt
             artifacts/build-info.json
             artifacts/download-test/result.json
+            artifacts/auth-test/result.json
           if-no-files-found: error
       - name: Upload diagnostics
         if: failure()
@@ -70,7 +74,7 @@ jobs:
           COMMIT: ${{ github.sha }}
         run: |
           tag="fix-${COMMIT:0:12}"
-          printf '%s\n\n' '第三方 PCL 下载修复版，由 chocoQAQ 独立维护。恢复原版与整合包下载；已通过 Release 构建及 Mojang 文件 SHA-1 校验。下载 EXE 后直接运行，依赖 .NET Framework 4.8。微软登录和 CurseForge 需要自行配置凭据，详见仓库 README。原作：龙腾猫跃。' 'SHA-256:' > release-notes.md
+          printf '%s\n\n' '第三方 PCL 下载修复版，由 chocoQAQ 独立维护。恢复原版与整合包下载；已通过 Release 构建、微软登录协议回归检查及 Mojang 文件 SHA-1 校验。已接入本项目微软 Client ID：微软账户及 Xbox 验证通过，当前 Minecraft API 返回 Invalid app registration，尚不能完成正版登录，需等待此应用审核获批并生效。主题选择及解锁入口已移除，使用默认蓝色界面。CurseForge API 尚未配置，详见仓库 README。下载 EXE 后直接运行，依赖 .NET Framework 4.8。原作：龙腾猫跃。' 'SHA-256:' > release-notes.md
           cat artifacts/SHA256SUMS.txt >> release-notes.md
           if ! gh release view "$tag" >/dev/null 2>&1; then
             gh release create "$tag" --target "$COMMIT" --draft \

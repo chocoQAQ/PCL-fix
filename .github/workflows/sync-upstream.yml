@@ -46,6 +46,10 @@ jobs:
         if: steps.merge.outputs.changed == 'true'
         shell: pwsh
         run: ./scripts/Test-Download.ps1
+      - name: Verify Microsoft login protocol
+        if: steps.merge.outputs.changed == 'true'
+        shell: pwsh
+        run: ./scripts/Test-MicrosoftLogin.ps1
       - name: Push only the validated merge and trigger a release build
         if: steps.merge.outputs.changed == 'true'
         shell: pwsh
