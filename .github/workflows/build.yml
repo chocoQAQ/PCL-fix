@@ -70,8 +70,9 @@ jobs:
         run: |
           tag="fix-${COMMIT:0:12}"
           if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --target "$COMMIT" \
+            gh release create "$tag" --target "$COMMIT" --draft \
               --title "PCL 下载修复版 ${COMMIT:0:12}" \
               --notes '第三方 PCL 下载修复版，由 chocoQAQ 独立维护。恢复原版与整合包下载；已通过 Release 构建、下载入口及 Mojang 文件 SHA-1 校验。解压后运行 Plain Craft Launcher 2.exe；依赖 .NET Framework 4.8。微软登录和 CurseForge 需要自行配置凭据，详见源代码中的 README。原作：龙腾猫跃。'
           fi
           gh release upload "$tag" artifacts/*.zip artifacts/SHA256SUMS.txt --clobber
+          gh release edit "$tag" --draft=false --latest
