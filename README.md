@@ -11,11 +11,11 @@
 
 ## 使用
 
-从 Releases 下载 `PCL-fix-<commit>.zip`，完整解压后运行 `Plain Craft Launcher 2.exe`。需要 Windows 与 .NET Framework 4.8；普通用户不需要安装 SDK 或 Visual Studio。
+从 Releases 下载 `PCL-fix-<commit>.exe`，直接运行即可。需要 Windows 与 .NET Framework 4.8；普通用户不需要安装 SDK 或 Visual Studio。
 
 修复版沿用上游官方源与镜像源机制、文件校验和正版购买及赞助提示。配置的注册表位置为 `HKEY_CURRENT_USER\Software\PCLFix`，与原版隔离。建议放在单独目录中使用。
 
-“检查更新”会打开本仓库的 Releases 页面，由用户下载更新，不会安装官方发行文件。发行包包含源码提交号与 SHA-256 校验文件。
+“检查更新”会打开本仓库的 Releases 页面，由用户下载更新，不会安装官方发行文件。EXE 文件名包含源码提交号，Release 说明中提供 SHA-256 校验值。
 
 公开源码不包含官方私有凭据：微软登录需要自行申请并在启动前设置进程或用户环境变量 `PCL_MS_CLIENT_ID`；CurseForge API 需要 `PCL_CURSEFORGE_API_KEY`。本仓库不内置、借用或收集其他项目的凭据。原版 Minecraft 下载不依赖这些凭据。主题解锁等上游未公开实现仍沿用源码版行为。
 
@@ -30,7 +30,7 @@ pwsh -File scripts/Build-Fix.ps1
 pwsh -File scripts/Test-Download.ps1
 ```
 
-构建结果位于 `artifacts/PCL-fix-<commit>.zip`。如需指定 MSBuild，可使用 `-MSBuildPath '完整的 MSBuild.exe 路径'`。
+构建结果位于 `artifacts/PCL-fix-<commit>.exe`。如需指定 MSBuild，可使用 `-MSBuildPath '完整的 MSBuild.exe 路径'`。
 
 下载验证程序加载编译后 EXE 内嵌的实际依赖，检查成品中的下载限制开关，使用启动器的下载器获取 Mojang 版本列表、Minecraft 1.21.1 JSON、完整客户端 JAR、资源索引及抽样支持库和资源，并校验文件哈希。测试不需要游戏账号，文件和缓存均在 `artifacts/download-test`。它验证下载和安装，不代表已完成登录或游戏启动测试。
 
@@ -43,7 +43,7 @@ pwsh -File scripts/Test-Download.ps1 -FullInstall
 
 `Sync upstream and build` 每 6 小时（UTC 00:23、06:23、12:23、18:23）检查 `Meloong-Git/PCL:main`，也支持手动运行。
 
-同步使用普通 Git merge 保留修复提交，检查下载开关、第三方标识和更新地址，再执行 Release 构建及实际下载验证。全部通过后才推送到 `main` 并触发发布，将 ZIP 与 SHA-256 校验文件上传到 Releases。
+同步使用普通 Git merge 保留修复提交，检查下载开关、第三方标识和更新地址，再执行 Release 构建及实际下载验证。全部通过后才推送到 `main` 并触发发布，将 EXE 上传到 Releases。
 
 冲突、上游接口变化、构建或下载检查失败时，工作流失败且不推送未经验证的合并。查看 Actions 失败日志并修复后重新运行；上游不更新时不会重复构建。上游源码的同步频率由原作者决定。
 

@@ -8,11 +8,17 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = Split-Path $PSScriptRoot -Parent
-if (-not $LauncherPath) { $LauncherPath = "$root/Plain Craft Launcher 2/bin/Plain Craft Launcher 2.exe" }
+if (-not $LauncherPath) {
+    $commit = (git -C $root rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot determine the build commit.' }
+    $LauncherPath = "$root/artifacts/PCL-fix-$($commit.Substring(0, 12)).exe"
+}
 $work = Join-Path $root 'artifacts\download-test'
 New-Item $work -ItemType Directory -Force | Out-Null
 Copy-Item -LiteralPath $LauncherPath -Destination "$work/Plain Craft Launcher 2.exe" -Force
-Copy-Item -LiteralPath "$LauncherPath.config" -Destination "$work/DownloadSmoke.exe.config" -Force
+# Test the same standalone EXE distributed in Releases, without a sidecar config.
+$smokeConfig = Join-Path $work 'DownloadSmoke.exe.config'
+if (Test-Path -LiteralPath $smokeConfig) { Remove-Item -LiteralPath $smokeConfig -Force }
 
 $framework = "$env:WINDIR/Microsoft.NET/Framework64/v4.0.30319"
 $wpf = "$framework/WPF"

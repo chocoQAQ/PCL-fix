@@ -26,11 +26,8 @@ if ($LASTEXITCODE -ne 0) { throw "Release build failed. See $artifacts/build.log
 
 $commit = (git rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0) { throw 'Cannot determine the build commit.' }
-$package = Join-Path $artifacts "PCL-fix-$($commit.Substring(0, 12))"
-New-Item $package -ItemType Directory -Force | Out-Null
-Copy-Item "$root/Plain Craft Launcher 2/bin/Plain Craft Launcher 2.exe" $package -Force
-Copy-Item "$root/Plain Craft Launcher 2/bin/Plain Craft Launcher 2.exe.config" $package -Force
-Copy-Item "$root/LICENCE", "$root/README.md" $package -Force
+$executable = Join-Path $artifacts "PCL-fix-$($commit.Substring(0, 12)).exe"
+Copy-Item "$root/Plain Craft Launcher 2/bin/Plain Craft Launcher 2.exe" $executable -Force
 @{
     repository = 'https://github.com/chocoQAQ/PCL-fix'
     commit = $commit
@@ -38,9 +35,7 @@ Copy-Item "$root/LICENCE", "$root/README.md" $package -Force
     upstream = 'https://github.com/Meloong-Git/PCL'
     built_at_utc = [DateTime]::UtcNow.ToString('o')
     configuration = 'Release'
-} | ConvertTo-Json | Set-Content "$package/build-info.json" -Encoding UTF8
-$zip = "$package.zip"
-Compress-Archive -LiteralPath (Get-ChildItem $package -File).FullName -DestinationPath $zip -Force
-$hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
-"$hash  $(Split-Path $zip -Leaf)" | Set-Content "$artifacts/SHA256SUMS.txt" -Encoding ascii
-Write-Host "Built $zip"
+} | ConvertTo-Json | Set-Content "$artifacts/build-info.json" -Encoding UTF8
+$hash = (Get-FileHash $executable -Algorithm SHA256).Hash.ToLowerInvariant()
+"$hash  $(Split-Path $executable -Leaf)" | Set-Content "$artifacts/SHA256SUMS.txt" -Encoding ascii
+Write-Host "Built $executable"

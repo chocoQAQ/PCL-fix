@@ -38,8 +38,9 @@ jobs:
         with:
           name: PCL-fix-${{ github.sha }}
           path: |
-            artifacts/PCL-fix-*.zip
+            artifacts/PCL-fix-*.exe
             artifacts/SHA256SUMS.txt
+            artifacts/build-info.json
             artifacts/download-test/result.json
           if-no-files-found: error
       - name: Upload diagnostics
@@ -69,10 +70,12 @@ jobs:
           COMMIT: ${{ github.sha }}
         run: |
           tag="fix-${COMMIT:0:12}"
+          printf '%s\n\n' '第三方 PCL 下载修复版，由 chocoQAQ 独立维护。恢复原版与整合包下载；已通过 Release 构建及 Mojang 文件 SHA-1 校验。下载 EXE 后直接运行，依赖 .NET Framework 4.8。微软登录和 CurseForge 需要自行配置凭据，详见仓库 README。原作：龙腾猫跃。' 'SHA-256:' > release-notes.md
+          cat artifacts/SHA256SUMS.txt >> release-notes.md
           if ! gh release view "$tag" >/dev/null 2>&1; then
             gh release create "$tag" --target "$COMMIT" --draft \
               --title "PCL 下载修复版 ${COMMIT:0:12}" \
-              --notes '第三方 PCL 下载修复版，由 chocoQAQ 独立维护。恢复原版与整合包下载；已通过 Release 构建、下载入口及 Mojang 文件 SHA-1 校验。解压后运行 Plain Craft Launcher 2.exe；依赖 .NET Framework 4.8。微软登录和 CurseForge 需要自行配置凭据，详见源代码中的 README。原作：龙腾猫跃。'
+              --notes-file release-notes.md
           fi
-          gh release upload "$tag" artifacts/*.zip artifacts/SHA256SUMS.txt --clobber
-          gh release edit "$tag" --draft=false --latest
+          gh release upload "$tag" artifacts/*.exe --clobber
+          gh release edit "$tag" --draft=false --latest --notes-file release-notes.md
