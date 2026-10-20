@@ -1,69 +1,77 @@
-name: Build
+name: Build PCL-fix
+
 on:
   push:
-    paths:
-      - 'Plain Craft Launcher 2/**'
-      - '.github/workflows/**'
+    branches: [main]
   pull_request:
-    paths:
-      - 'Plain Craft Launcher 2/**'
-      - '.github/workflows/**'
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
-    name: Build
-    runs-on: windows-latest
-    strategy:  
-       matrix:  
-         configuration: [Debug, Release]
-
+    runs-on: windows-2022
+    timeout-minutes: 30
     steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.0.x'
+      - uses: microsoft/setup-msbuild@v3
+        with:
+          msbuild-architecture: x64
+      - name: Build and verify the fork
+        shell: pwsh
+        run: ./scripts/Build-Fix.ps1
+      - name: Verify Minecraft downloads using the built launcher
+        shell: pwsh
+        run: ./scripts/Test-Download.ps1
+      - uses: actions/upload-artifact@v7
+        with:
+          name: PCL-fix-${{ github.sha }}
+          path: |
+            artifacts/PCL-fix-*.zip
+            artifacts/SHA256SUMS.txt
+            artifacts/download-test/result.json
+          if-no-files-found: error
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-diagnostics-${{ github.run_id }}
+          path: |
+            artifacts/*.log
+            artifacts/download-test/*.log
 
-    - name: Checkout
-      uses: actions/checkout@v6
-      with:
-        fetch-depth: 1
-        submodules: true
-
-    - name: Set Describe
-      shell: bash
-      run: |
-          describe=`git describe --tags --always`
-          echo "describe=$describe" >> $GITHUB_ENV
-
-    - name: Setup MSBuild.exe
-      uses: microsoft/setup-msbuild@v3
-      with:
-        msbuild-architecture: x64
-    
-    - name: Update Help
-      run:  |
-        Set-Location ..
-        git clone https://github.com/LTCatt/PCL2Help.git -b master --single-branch --depth 1
-        Set-Location PCL2Help
-        Remove-Item -Path *.* -Recurse -Force
-        Compress-Archive -Path .\* -DestinationPath .\Help.zip
-        Copy-Item -Path .\Help.zip -Destination "${{ GITHUB.WORKSPACE }}\Plain Craft Launcher 2\Resources\Help.zip" -Force
-        Set-Location ..
-        Remove-Item PCL2Help -Recurse -Force
-        Set-Location ${{ GITHUB.WORKSPACE }}
-
-
-    - name: Replace
-      run: |
-        (gc "Plain Craft Launcher 2\Modules\ModSecret.vb") -replace 'Public OAuthClientId As String = If(Environment.GetEnvironmentVariable("PCL_MS_CLIENT_ID"), "")', 'Public OAuthClientId As String = If(Environment.GetEnvironmentVariable("PCL_MS_CLIENT_ID"), "${{ secrets.CLIENT_ID }}")' | Out-File "Plain Craft Launcher 2\Modules\ModSecret.vb"
-        (gc "Plain Craft Launcher 2\Modules\ModSecret.vb") -replace 'Public CurseForgeAPIKey As String = If(Environment.GetEnvironmentVariable("PCL_CURSEFORGE_API_KEY"), "")', 'Public CurseForgeAPIKey As String = If(Environment.GetEnvironmentVariable("PCL_CURSEFORGE_API_KEY"), "${{ secrets.CURSEFORGE_API_KEY }}")' | Out-File "Plain Craft Launcher 2\Modules\ModSecret.vb"
-        (gc "Plain Craft Launcher 2\Modules\Base\ModBase.vb") -replace 'Public Const CommitHash As String = ""', 'Public Const CommitHash As String = "${{ github.sha }}"' | Out-File "Plain Craft Launcher 2\Modules\Base\ModBase.vb"
-        
-    - name: Restore NuGet Packages
-      run: dotnet restore PCLCS\PCLCS.csproj
-
-    - name: Build
-      run: msbuild "Plain Craft Launcher 2\Plain Craft Launcher 2.vbproj" -p:Configuration=${{ matrix.configuration }}
-
-    - name: Upload a Build Artifact
-      uses: actions/upload-artifact@v7
-      with:
-        name: ${{ matrix.configuration }} ${{ env.describe }}
-        path: Plain Craft Launcher 2\obj\${{ matrix.configuration }}\Plain Craft Launcher 2.exe
+  release:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository == 'chocoQAQ/PCL-fix'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: PCL-fix-${{ github.sha }}
+          path: artifacts
+      - name: Publish the verified build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          tag="fix-${COMMIT:0:12}"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --target "$COMMIT" \
+              --title "PCL 下载修复版 ${COMMIT:0:12}" \
+              --notes '第三方 PCL 下载修复版，由 chocoQAQ 独立维护。恢复原版与整合包下载；已通过 Release 构建、下载入口及 Mojang 文件 SHA-1 校验。解压后运行 Plain Craft Launcher 2.exe；依赖 .NET Framework 4.8。微软登录和 CurseForge 需要自行配置凭据，详见源代码中的 README。原作：龙腾猫跃。'
+          fi
+          gh release upload "$tag" artifacts/*.zip artifacts/SHA256SUMS.txt --clobber

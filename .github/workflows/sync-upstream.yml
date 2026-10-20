@@ -1,0 +1,65 @@
+name: Sync upstream and build
+
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'chocoQAQ/PCL-fix'
+    runs-on: windows-2022
+    timeout-minutes: 35
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          submodules: recursive
+      - name: Merge upstream without overwriting fork changes
+        id: merge
+        shell: pwsh
+        run: ./scripts/Sync-Upstream.ps1
+      - uses: actions/setup-dotnet@v5
+        if: steps.merge.outputs.changed == 'true'
+        with:
+          dotnet-version: '9.0.x'
+      - uses: microsoft/setup-msbuild@v3
+        if: steps.merge.outputs.changed == 'true'
+        with:
+          msbuild-architecture: x64
+      - name: Build the merged source and check fork invariants
+        if: steps.merge.outputs.changed == 'true'
+        shell: pwsh
+        run: ./scripts/Build-Fix.ps1
+      - name: Check Minecraft downloads
+        if: steps.merge.outputs.changed == 'true'
+        shell: pwsh
+        run: ./scripts/Test-Download.ps1
+      - name: Push only the validated merge and trigger a release build
+        if: steps.merge.outputs.changed == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          git push origin HEAD:main
+          if ($LASTEXITCODE -ne 0) { throw 'Push failed; main may have changed. No force push was attempted.' }
+          gh workflow run build.yml --ref main
+          if ($LASTEXITCODE -ne 0) { throw 'Merged source was pushed, but dispatching the release build failed. Run Build PCL-fix manually.' }
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sync-diagnostics-${{ github.run_id }}
+          path: artifacts/*.log
