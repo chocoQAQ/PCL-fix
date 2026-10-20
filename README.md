@@ -1,6 +1,8 @@
-# PCL 下载修复版
+# PCL 修复版
 
 本项目是 **chocoQAQ 基于 Plain Craft Launcher（PCL）独立维护的第三方修改版**，恢复上游 2.99.0.0 中关闭的 Minecraft 原版下载及相关整合包安装入口。原作开发者为 **龙腾猫跃**，感谢原作者与社区贡献者。
+
+本次修复、构建验证及自动同步配置由 AI 编程助手 Codex 辅助完成，详见 [AI 工作说明](AI_WORK.md)。
 
 - [下载修复版](https://github.com/chocoQAQ/PCL-fix/releases/latest)
 - [构建记录](https://github.com/chocoQAQ/PCL-fix/actions/workflows/build.yml)
@@ -41,11 +43,7 @@ pwsh -File scripts/Test-Download.ps1 -FullInstall
 
 `Sync upstream and build` 每 6 小时（UTC 00:23、06:23、12:23、18:23）检查 `Meloong-Git/PCL:main`，也支持手动运行。
 
-1. 使用普通 Git merge 合并上游，保留修复提交，不强制覆盖分支。
-2. 检查下载开关、第三方标识、设置隔离及更新地址。
-3. 在 Windows runner 上构建 Release，并验证实际游戏下载。
-4. 只有全部通过才推送到 `main`，随后显式触发 `Build PCL-fix`（`GITHUB_TOKEN` 的 push 本身不会触发另一次 push 工作流）。
-5. 构建工作流再次验证后，将 ZIP 与 SHA-256 校验文件发布至本仓库 Releases；每个源码提交对应一个 `fix-<commit>` 标签。
+同步使用普通 Git merge 保留修复提交，检查下载开关、第三方标识和更新地址，再执行 Release 构建及实际下载验证。全部通过后才推送到 `main` 并触发发布，将 ZIP 与 SHA-256 校验文件上传到 Releases。
 
 冲突、上游接口变化、构建或下载检查失败时，工作流失败且不推送未经验证的合并。查看 Actions 失败日志并修复后重新运行；上游不更新时不会重复构建。上游源码的同步频率由原作者决定。
 
